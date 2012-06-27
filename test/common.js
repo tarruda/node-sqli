@@ -23,9 +23,9 @@ exports.createSuite = function(conn, specificOptions, specificTestsFactory) {
     'inserting strings': function(done) {
       conn.execute('INSERT INTO common_tests (id, stringCol) VALUES(?, ?)', 
           [1, 'String1']);
-      conn.execute('INSERT INTO common_tests (id, stringCol) VALUES(?, ?)', 
-          [2, 'String2']);
+      conn.execute("INSERT INTO common_tests (id, stringCol) VALUES(2, 'String2')");
       conn.execute('SELECT * FROM common_tests').all(function(rows) {
+        assert.equal(2, rows.length);
         assert.equal(rows[0].id, 1);
         assert.equal(rows[0].stringCol, 'String1');
         assert.equal(rows[1].id, 2);
