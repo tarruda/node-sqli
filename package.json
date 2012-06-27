@@ -3,6 +3,7 @@
   "name": "sqli",
   "description": "Common interface for accessing SQL databases from node.js",
   "version": "0.0.1",
+  "main": "./lib/sqli.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/tarruda/node-sqli.git"
