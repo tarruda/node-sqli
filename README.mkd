@@ -1,0 +1,77 @@
+# node-sqli
+
+  Library that attempts to provide a common interface for SQL databases by
+  wrapping third party drivers in a simple interface. 
+
+#### Instalation
+
+    $ npm install sqli
+
+#### Usage
+
+```js
+var sqlite = require('sqli').getDriver('sqlite');
+, conn = sqlite.connect(':memory:');
+
+conn.execute('CREATE TABLE tags (id TEXT, value TEXT)');
+conn.execute('INSERT INTO tags (id, value) VALUES (?, ?)', ['id1', 'value1']);
+conn.execute("INSERT INTO tags (id, value) VALUES ('id2', 'value2')");
+conn.execute('SELECT * FROM tags').each(function(row) {
+  console.log(row);
+});
+```
+
+ The API methods always return promises/futures, which will queue statements/callbacks
+ to be executed when appropriate, creating the illusion of a synchronous programming
+ style.
+
+#### Implementing custom drivers:
+
+```js
+function factory(sqlite3) {
+  var sqli = require('./sqli');
+  sqli.register('sqlite', {
+    connect: function(filename, cb) {
+      var db = new sqlite3.Database(filename, function(err) {
+        if (err) return cb(err, null);
+        cb(null, db);
+      });
+    },
+    execute: function(db, sql, params, cb) {
+      if (!params)
+        params = [];
+      db.all(sql, params, function(err, rows) {
+        if (err) return cb(err);
+        cb(null, {
+          each: function(rowCb, endCb) {
+            for (var i = 0; i < rows.length; i++)
+              rowCb(rows[i]);
+            if (typeof endCb === 'function')
+              endCb();
+          }
+        });
+      });
+    },
+  });
+};
+
+try {
+  factory(require('sqlite3'));
+} catch (error) {
+  console.log('Could not load sqlite3 wrapper ' + error.message);
+}
+```
+  
+  In other words, a custom driver must only provide a wrapper object with the 
+  'connect' and 'execute' methods. The 'connect' method will accept a callback
+  used to pass the 'raw connection' back to the sqli API. The 'execute' method
+  will receive the 'raw connection' along with the sql string, parameter array
+  and a callback that should be used to return a cursor to iterate over the 
+  resultset. The cursor must provide a 'each' method that will receive two
+  callbacks: one for passing each row, and another to signal that the iteration
+  is over.
+
+## To run the tests
+
+    $ npm install -d
+    $ make test
