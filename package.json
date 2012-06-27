@@ -1,0 +1,25 @@
+{
+  "author": "Thiago de Arruda <tpadilha84@gmail.com>",
+  "name": "sqli",
+  "description": "Common interface for accessing SQL databases from node.js",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tarruda/node-sqli.git"
+  },
+  "dependencies": {
+    "generic-pool": ">=1.0.9"
+  },
+  "devDependencies": {
+    "mocha": ">=1.2.0",
+    "assert": ">=0.4.9"
+  },
+  "optionalDependencies": {
+    "sqlite3": ">=2.1.4",
+    "pg": ">=0.7.1",
+    "mysql": ">=2.0.0alpha3"
+  },
+  "engines": {
+    "node": "*"
+  }
+}
