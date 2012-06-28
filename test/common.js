@@ -10,9 +10,17 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
     stringType: 'TEXT'
   }, conn = null;
   var tests = {
+    'error ignores following statements': function(done) {
+      conn.execute('SELECT * FROM missing_table');
+      conn.execute('SELECT 4');
+      conn.execute('SELECT 3');
+      conn.error(function(err) { 
+        done();
+      });
+    },
     'error makes connection unusable': function(done) {
       conn.execute('Invalid SQL');
-      conn.fail(function(err) { 
+      conn.error(function(err) { 
         try {
           conn.execute('SELECT 1'); // nothing could go wrong here
         } catch(err) {
@@ -80,6 +88,69 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.execute('DELETE FROM test WHERE id = 2');
       conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
         assert.equal(value, 1);
+        done();
+      });
+    },
+    'transaction commit': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.begin();
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+      conn.commit();
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 4);
+        assert.deepEqual([rows[0].s, rows[1].s, rows[2].s, rows[3].s],
+        ['abc', 'def', 'ghi', 'jkl']);
+        done();
+      });
+    },
+    'transaction rollback': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.begin();
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+      conn.rollback();
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 2);
+        assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
+        done();
+      });
+    },
+    'transaction savepoints': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.begin();
+      conn.execute("UPDATE test SET stringcol = 'txt' WHERE id=2");
+      conn.save('s1');
+      conn.execute('DELETE FROM test WHERE id = 1');
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 1);
+        assert.equal(rows[0].s, 'txt');
+      });
+      conn.rollback('s1');
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 2);
+        assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'txt']);
+      });
+      conn.rollback();
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 2);
+        assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
+        done();
+      });
+    },
+    'select each': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      var expected = ['abc', 'def', 'ghi'];
+      conn.execute('SELECT stringcol AS s FROM test').each(function(row) {
+        assert.equal(row.s, expected.shift());
+      }, function() {
+        assert.equal(expected.length, 0, 
+            'only invoke the final callback after the rows callbacks');
         done();
       });
     },
