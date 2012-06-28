@@ -11,11 +11,29 @@
 
 #### Usage
 
+  Acquire a connection:
+
 ```js
 var sqli = require('sqli')
 , sqlite = sqli.getDriver('sqlite')
 , conn = sqlite.connect(':memory:');
+```
 
+  Connections can also be acquired via pools which are useful in web applications
+
+```js
+// max 5 connections, 10 seconds before idle connections will be closed
+pool = sqlite.createPool('some.db', 5, 10000);
+conn = pool.get();
+```
+
+  The pool is implemented using https://github.com/coopernurse/node-pool.
+
+  The API methods always return promises/futures, which will queue statements/callbacks
+  to be executed when appropriate, creating the illusion of a synchronous programming
+  style:
+
+```js
 conn.execute('CREATE TABLE tags (id TEXT, value TEXT)');
 conn.execute('INSERT INTO tags (id, value) VALUES (?, ?)', ['id1', 'value1']);
 conn.execute("INSERT INTO tags (id, value) VALUES ('id2', 'value2')");
@@ -23,10 +41,6 @@ conn.execute('SELECT * FROM tags').each(function(row) {
   console.log(row);
 });
 ```
-
- The API methods always return promises/futures, which will queue statements/callbacks
- to be executed when appropriate, creating the illusion of a synchronous programming
- style.
 
 #### Transactions API
 
@@ -66,7 +80,7 @@ conn.execute('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) 
 
 #### Implementing custom drivers:
 
-  Here is node-sqlite3 wrapper from lib/sqlite.js:
+  Here is node-sqlite3 wrapper:
 
 ```js
 function factory(sqlite3) {
