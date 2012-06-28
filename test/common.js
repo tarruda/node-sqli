@@ -1,3 +1,7 @@
+/**
+ * Sanity tests that should be applied to all drivers
+ */
+
 var assert = require('assert');
 
 exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
@@ -29,7 +33,33 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
     },
-    'deleting': function(done) {
+    'update': function(done) {
+      // FIXME: This will break on postgres 9.x if the 'postgresql.conf'
+      // option 'bytea_output' is not 'escape'. Perhaps find a way to force
+      // this setting on client connection?
+      // http://archives.postgresql.org/pgsql-general/2010-10/msg00197.php
+      conn.execute('INSERT INTO test (id,blobcol) VALUES(?,?)', 
+          [1, new Buffer('abc')]);
+      conn.execute('INSERT INTO test (id,blobcol) VALUES(?,?)', 
+          [2, new Buffer('def')]);
+      conn.execute('UPDATE test SET blobcol = ?', [new Buffer('txt')]);
+      conn.execute('SELECT * FROM test').all(function(rows) {
+        assert.equal(rows[0].blobcol.toString('utf-8'), 'txt');
+        assert.equal(rows[1].blobcol.toString('utf-8'), 'txt');
+        done();
+      });
+    },
+    'update where': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.execute("UPDATE test SET stringcol = 'txt' WHERE id=2");
+      conn.execute('SELECT * FROM test').all(function(rows) {
+        assert.equal(rows[0].stringcol, 'abc');
+        assert.equal(rows[1].stringcol, 'txt');
+        done();
+      });
+    },
+    'delete': function(done) {
       conn.execute('INSERT INTO test (id) VALUES(?)', [1]);
       conn.execute('INSERT INTO test (id) VALUES(?)', [2]);
       conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
@@ -41,7 +71,7 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
     },
-    'deleting with condition': function(done) {
+    'delete where': function(done) {
       conn.execute('INSERT INTO test (id) VALUES(?)', [1]);
       conn.execute('INSERT INTO test (id) VALUES(?)', [2]);
       conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
@@ -52,7 +82,7 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(value, 1);
         done();
       });
-    }
+    },
   };
   if (specificOptions) {
     for (var key in specificOptions)
