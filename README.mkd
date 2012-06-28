@@ -1,7 +1,9 @@
 # node-sqli
 
   Library that attempts to provide a common interface for SQL databases by
-  wrapping third party drivers in a simple interface. 
+  wrapping third party drivers with a simple interface. Inspired by python's
+  dbapi, java jdbc, etc. So far there's support for sqlite, mysql and postgres.
+  See the end of README for info on how to wrap other drivers.
 
 #### Instalation
 
@@ -10,7 +12,8 @@
 #### Usage
 
 ```js
-var sqlite = require('sqli').getDriver('sqlite');
+var sqli = require('sqli')
+, sqlite = sqli.getDriver('sqlite')
 , conn = sqlite.connect(':memory:');
 
 conn.execute('CREATE TABLE tags (id TEXT, value TEXT)');
@@ -25,7 +28,45 @@ conn.execute('SELECT * FROM tags').each(function(row) {
  to be executed when appropriate, creating the illusion of a synchronous programming
  style.
 
+#### Transactions API
+
+```js
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+conn.begin(); // This will disable autocommit
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+conn.commit(); // commits everything since 'begin'
+conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
+  console.log(value); // 4
+});
+```
+
+  There's also limited support to isolation levels and savepoints:
+
+```js
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+conn.begin(sqli.SERIALIZABLE);
+conn.execute("UPDATE test SET stringcol = 'txt' WHERE id=2");
+conn.save('s1');
+conn.execute('DELETE FROM test WHERE id = 1');
+conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+  console.log(rows);
+});
+conn.rollback('s1'); // Revert everything since 'save'
+conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+  console.log(rows);
+});
+conn.rollback(); // Revert everything done since 'begin'
+conn.execute('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) {
+  console.log(row.s); // 'abc'
+});
+```
+
 #### Implementing custom drivers:
+
+  Here is node-sqlite3 wrapper from lib/sqlite.js:
 
 ```js
 function factory(sqlite3) {
@@ -37,12 +78,13 @@ function factory(sqlite3) {
         cb(null, db);
       });
     },
+    close: function(db) {
+      db.close();
+    },
     execute: function(db, sql, params, cb) {
-      if (!params)
-        params = [];
       db.all(sql, params, function(err, rows) {
-        if (err) return cb(err);
-        cb(null, {
+        if (err) cb(err);
+        else cb(null, {
           each: function(rowCb, endCb) {
             for (var i = 0; i < rows.length; i++)
               rowCb(rows[i]);
@@ -52,6 +94,27 @@ function factory(sqlite3) {
         });
       });
     },
+    begin: function(isolation) {
+      switch (isolation) {
+        case sqli.REPEATABLE_READ:
+          return 'BEGIN IMMEDIATE TRANSACTION';
+        case sqli.SERIALIZABLE:
+          return 'BEGIN EXCLUSIVE TRANSACTION';
+        default:
+          return 'BEGIN TRANSACTION';
+      }
+    },
+    save: function(savepoint) {
+      return 'SAVEPOINT ' + savepoint;
+    },
+    commit: function() {
+      return 'COMMIT';
+    },
+    rollback: function(savepoint) {
+      if (!savepoint)
+        return 'ROLLBACK';
+      return 'ROLLBACK TO ' + savepoint;
+    }
   });
 };
 
@@ -61,17 +124,12 @@ try {
   console.log('Could not load sqlite3 wrapper ' + error.message);
 }
 ```
-  
-  In other words, a custom driver must only provide a wrapper object with the 
-  'connect' and 'execute' methods. The 'connect' method will accept a callback
-  used to pass the 'raw connection' back to the sqli API. The 'execute' method
-  will receive the 'raw connection' along with the sql string, parameter array
-  and a callback that should be used to return a cursor to iterate over the 
-  resultset. The cursor must provide a 'each' method that will receive two
-  callbacks: one for passing each row, and another to signal that the iteration
-  is over.
 
-## To run the tests
+  If you do implement more wrappers, please send me pull requests :).
+
+  There's a generic test suite(test/common.js) that can be used as a quick sanity check.
+
+## To run the tests(will only run the tests for the available database systems)
 
     $ npm install -d
     $ make test

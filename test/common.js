@@ -154,6 +154,15 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
     },
+    'select first': function(done) {
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      conn.execute('SELECT stringcol AS s FROM test ORDER BY id DESC').first(function(row) {
+        assert.equal(row.s, 'ghi');
+        done();
+      });
+    },
   };
   if (specificOptions) {
     for (var key in specificOptions)
