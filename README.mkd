@@ -30,7 +30,7 @@ conn = pool.get();
   The pool is implemented using https://github.com/coopernurse/node-pool.
 
   The API methods always return promises/futures, which will queue statements/callbacks
-  to be executed when appropriate, creating the illusion of a synchronous programming
+  to be executed when appropriate, creating the illusion of synchronous programming
   style:
 
 ```js
