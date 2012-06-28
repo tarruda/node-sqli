@@ -22,7 +22,11 @@ suite('Postgres -', function() {
 });
 
 if (postgres) {
-  createSuite(postgres.connect('tcp://postgres:123@localhost/postgres'), {
-    blobType: 'bytea'
+  var connStr = 'tcp://postgres:123@localhost/postgres';
+  // only test if it is possible to connect
+  var tmp = postgres.connect(connStr).ready(function() {
+    createSuite(postgres.createPool(connStr, 1), {
+      blobType: 'bytea'
+    });
   });
 }

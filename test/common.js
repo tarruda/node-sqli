@@ -1,24 +1,20 @@
 var assert = require('assert');
 
-exports.createSuite = function(conn, specificOptions, specificTestsFactory) {
+exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
   var options = {
     blobType: 'BLOB',
     stringType: 'TEXT'
-  };
+  }, conn = null;
   var tests = {
-    'errors': function(done) {
-      var expected = 2;
-      conn.execute('Invalid SQL').fail(function(err) {
-        decrement();
-      });
-      conn.execute('INSERT INTO missing VALUES(1, 2)').fail(function(err) {
-        decrement();
-      });
-      function decrement() {
-        expected--;
-        if (expected === 0)
+    'error makes connection unusable': function(done) {
+      conn.execute('Invalid SQL');
+      conn.fail(function(err) { 
+        try {
+          conn.execute('SELECT 1'); // nothing could go wrong here
+        } catch(err) {
           done();
-      }
+        }
+      });
     },
     'inserting strings': function(done) {
       conn.execute('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
@@ -32,7 +28,6 @@ exports.createSuite = function(conn, specificOptions, specificTestsFactory) {
         assert.equal(rows[1].stringcol, 'String2');
         done();
       });
-
     },
     'deleting': function(done) {
       conn.execute('INSERT INTO test (id) VALUES(?)', [1]);
@@ -71,6 +66,7 @@ exports.createSuite = function(conn, specificOptions, specificTestsFactory) {
   }
   suite('Common -', function() {
     setup(function() {
+      conn = pool.get();
       conn.execute('DROP TABLE IF EXISTS test'); 
       conn.execute(
         'CREATE TABLE test (' +
@@ -78,6 +74,9 @@ exports.createSuite = function(conn, specificOptions, specificTestsFactory) {
           ' blobcol ' + options.blobType + ',' +
           ' stringcol ' + options.stringType +
       ')');
+    });
+    teardown(function() {
+      conn.release();
     });
     for (var key in tests)
       test(key, tests[key]);
