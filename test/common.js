@@ -91,6 +91,17 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
     },
+    'transaction begin': function(done) {
+      conn.begin();
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+      conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+        assert.equal(rows.length, 2);
+        assert.deepEqual([rows[0].s, rows[1].s], ['ghi', 'jkl']);
+        done();
+      });
+      conn.commit();
+    },
     'transaction commit': function(done) {
       conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
