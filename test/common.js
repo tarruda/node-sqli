@@ -10,24 +10,6 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
     stringType: 'TEXT'
   }, conn = null;
   var tests = {
-    'error ignores following statements': function(done) {
-      conn.execute('SELECT * FROM missing_table');
-      conn.execute('SELECT 4');
-      conn.execute('SELECT 3');
-      conn.error(function(err) { 
-        done();
-      });
-    },
-    'error makes connection unusable': function(done) {
-      conn.execute('Invalid SQL');
-      conn.error(function(err) { 
-        try {
-          conn.execute('SELECT 1'); // nothing could go wrong here
-        } catch(err) {
-          done();
-        }
-      });
-    },
     'inserting strings': function(done) {
       conn.execute('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
           [1, 'String1']);
