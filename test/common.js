@@ -179,7 +179,7 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       ')');
     });
     teardown(function() {
-      conn.release();
+      conn.close();
     });
     for (var key in tests)
       test(key, tests[key]);

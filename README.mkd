@@ -95,17 +95,12 @@ function factory(sqlite3) {
     close: function(db) {
       db.close();
     },
-    execute: function(db, sql, params, cb) {
-      db.all(sql, params, function(err, rows) {
-        if (err) cb(err);
-        else cb(null, {
-          each: function(rowCb, endCb) {
-            for (var i = 0; i < rows.length; i++)
-              rowCb(rows[i]);
-            if (typeof endCb === 'function')
-              endCb();
-          }
-        });
+    execute: function(db, sql, params, rowCb, endCb) {
+      db.each(sql, params, function(err, row) {
+        if (err) endCb(err);
+        else rowCb(row);
+      }, function(err, count) {
+        endCb(err);
       });
     },
     begin: function(isolation) {
