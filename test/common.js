@@ -10,6 +10,40 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
     stringType: 'TEXT'
   }, conn = null;
   var tests = {
+    'statement error': function(done) {
+      conn.execute('INVALID SQL').then(function(err) {
+        assert.notStrictEqual(err, null);
+        done();
+      });
+    },
+    'error in statement propagates to connection': 
+    function(done) {
+      conn.execute('INVALID SQL');
+      conn.error(function(err) { 
+        assert.notStrictEqual(err, null);
+        done();
+      });
+    },
+    'error in statement propagates to subsequent statements': 
+    function(done) {
+      var expected = 3
+      , error = null;
+      function consume(err, expectedOrder) {
+        assert.strictEqual(expectedOrder, expected);
+        assert.notStrictEqual(err, null);
+        expected--;
+        if (error === null) error = err;
+        else assert.strictEqual(err, error);
+        if (expected === 0)
+          done();
+      }
+      conn.execute('INVALID SQL')
+      .then(function(err) { consume(err, 3); });
+      conn.execute('SELECT * FROM test')
+      .then(function(err) { consume(err, 2); });
+      conn.execute('SELECT id FROM test')
+      .then(function(err) { consume(err, 1); });
+    },
     'inserting strings': function(done) {
       conn.execute('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
           [1, 'String1']);
@@ -141,7 +175,8 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       var expected = ['abc', 'def', 'ghi'];
       conn.execute('SELECT stringcol AS s FROM test').each(function(row) {
         assert.equal(row.s, expected.shift());
-      }, function() {
+      }).then(function(err) {
+        assert.equal(err, null);
         assert.equal(expected.length, 0, 
             'only invoke the final callback after the rows callbacks');
         done();
