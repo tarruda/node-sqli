@@ -44,6 +44,15 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.execute('SELECT id FROM test')
       .then(function(err) { consume(err, 1); });
     },
+    'after complete callback': function(done) {
+      conn.execute('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
+        [1, 'String1']);
+      conn.execute("INSERT INTO test (id, stringcol) VALUES(2, 'String2')")
+      .then(function(err) {
+        assert.strictEqual(err, null);
+        done();
+      });
+    },
     'inserting strings': function(done) {
       conn.execute('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
           [1, 'String1']);

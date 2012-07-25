@@ -78,6 +78,30 @@ conn.execute('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) 
 });
 ```
 
+  An error handler can be attached invoking 'then' on the result object:
+
+```js
+conn.execute('INSERT INTO t1 VALUES (?, ?)', [a1, a2]);
+conn.execute('INSERT INTO t2 VALUES (?, ?)', [a1, a2]);
+conn.execute('INSERT INTO t3 VALUES (?, ?)', [a1, a2]);
+conn.execute('INSERT INTO t4 VALUES (?, ?)', [a1, a2])
+.then(function(err) {
+  // This handler will be executed after all other statements.
+  // If an error ocurred during the execution of any statement,
+  // it will be referenced by the 'err' parameter
+  if (err) console.log(err);
+  else console.log('success');
+});
+``` 
+
+  Errors can also be caught by attaching a handler to the connection object:
+
+```js
+conn.error(function(err) {
+  // handle the first connection error
+});
+```
+
 #### Implementing custom drivers:
 
   Here is node-sqlite3 wrapper:
@@ -95,12 +119,13 @@ function factory(sqlite3) {
     close: function(db) {
       db.close();
     },
-    execute: function(db, sql, params, rowCb, endCb) {
+    execute: function(db, sql, params, rowCb, endCb, errCb) {
       db.each(sql, params, function(err, row) {
-        if (err) endCb(err);
+        if (err) errCb(err);
         else rowCb(row);
       }, function(err, count) {
-        endCb(err);
+        if (err) errCb(err);
+        else endCb();
       });
     },
     begin: function(isolation) {
