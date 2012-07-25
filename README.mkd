@@ -34,10 +34,10 @@ conn = pool.get();
   style:
 
 ```js
-conn.execute('CREATE TABLE tags (id TEXT, value TEXT)');
-conn.execute('INSERT INTO tags (id, value) VALUES (?, ?)', ['id1', 'value1']);
-conn.execute("INSERT INTO tags (id, value) VALUES ('id2', 'value2')");
-conn.execute('SELECT * FROM tags').each(function(row) {
+conn.exec('CREATE TABLE tags (id TEXT, value TEXT)');
+conn.exec('INSERT INTO tags (id, value) VALUES (?, ?)', ['id1', 'value1']);
+conn.exec("INSERT INTO tags (id, value) VALUES ('id2', 'value2')");
+conn.exec('SELECT * FROM tags').each(function(row) {
   console.log(row);
 });
 ```
@@ -45,13 +45,13 @@ conn.execute('SELECT * FROM tags').each(function(row) {
 #### Transactions API
 
 ```js
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
 conn.begin(); // This will disable autocommit
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
 conn.commit(); // commits everything since 'begin'
-conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
+conn.exec('SELECT COUNT(*) FROM test').scalar(function(value) {
   console.log(value); // 4
 });
 ```
@@ -59,21 +59,21 @@ conn.execute('SELECT COUNT(*) FROM test').scalar(function(value) {
   There's also limited support to isolation levels and savepoints:
 
 ```js
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
-conn.execute('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
 conn.begin(sqli.SERIALIZABLE);
-conn.execute("UPDATE test SET stringcol = 'txt' WHERE id=2");
+conn.exec("UPDATE test SET stringcol = 'txt' WHERE id=2");
 conn.save('s1');
-conn.execute('DELETE FROM test WHERE id = 1');
-conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+conn.exec('DELETE FROM test WHERE id = 1');
+conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
   console.log(rows);
 });
 conn.rollback('s1'); // Revert everything since 'save'
-conn.execute('SELECT stringcol AS s FROM test').all(function(rows) {
+conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
   console.log(rows);
 });
 conn.rollback(); // Revert everything done since 'begin'
-conn.execute('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) {
+conn.exec('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) {
   console.log(row.s); // 'abc'
 });
 ```
@@ -81,10 +81,10 @@ conn.execute('SELECT stringcol AS s FROM test ORDER BY id').first(function(row) 
   An error handler can be attached invoking 'then' on the result object:
 
 ```js
-conn.execute('INSERT INTO t1 VALUES (?, ?)', [a1, a2]);
-conn.execute('INSERT INTO t2 VALUES (?, ?)', [a1, a2]);
-conn.execute('INSERT INTO t3 VALUES (?, ?)', [a1, a2]);
-conn.execute('INSERT INTO t4 VALUES (?, ?)', [a1, a2])
+conn.exec('INSERT INTO t1 VALUES (?, ?)', [a1, a2]);
+conn.exec('INSERT INTO t2 VALUES (?, ?)', [a1, a2]);
+conn.exec('INSERT INTO t3 VALUES (?, ?)', [a1, a2]);
+conn.exec('INSERT INTO t4 VALUES (?, ?)', [a1, a2])
 .then(function(err) {
   // This handler will be executed after all other statements.
   // If an error ocurred during the execution of any statement,
