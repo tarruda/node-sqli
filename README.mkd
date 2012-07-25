@@ -1,7 +1,7 @@
 # node-sqli
 
   Library that attempts to provide a common interface for SQL databases by
-  wrapping third party drivers with a simple interface. Inspired by python's
+  wrapping third party drivers with a simple API. Inspired by python's
   dbapi, java jdbc, etc. So far there's support for sqlite, mysql and postgres.
   See the end of README for info on how to wrap other drivers.
 
