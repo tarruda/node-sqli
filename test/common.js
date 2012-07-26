@@ -24,25 +24,47 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
     },
-    'error in statement propagates to subsequent statements': 
+    "can't use paused connection": function(done) {
+      conn.exec('INVALID SQL')
+      .then(function(err) { 
+        try {
+          conn.exec('SELECT * FROM test');
+        } catch(e) {
+          done();
+          return;
+        }
+        throw new Error('Should have thrown error due to paused connection');
+      });
+    },
+    'connection pause on error then resume': 
     function(done) {
-      var expected = 3
-      , error = null;
+      var expected = 3;
       function consume(err, expectedOrder) {
         assert.strictEqual(expectedOrder, expected);
-        assert.notStrictEqual(err, null);
+        assert.notEqual(err, null);
         expected--;
-        if (error === null) error = err;
-        else assert.strictEqual(err, error);
-        if (expected === 0)
-          done();
+        conn.resume();
+        if (expected === 0) done();
       }
-      conn.exec('INVALID SQL')
-      .then(function(err) { consume(err, 3); });
-      conn.exec('SELECT * FROM test')
-      .then(function(err) { consume(err, 2); });
-      conn.exec('SELECT id FROM test')
-      .then(function(err) { consume(err, 1); });
+      conn.exec('INVALID SQL').then(function(err) { consume(err, 3); });
+      conn.exec('INVALID SQL 2').then(function(err) { consume(err, 2); });
+      conn.exec('INVALID SQL 3').then(function(err) { consume(err, 1); });
+    },
+    'rollback resumes paused connection': 
+    function(done) {
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.begin();
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
+      conn.exec('CAUSING SQL ERROR').then(function(err) {
+        conn.rollback();
+        conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
+          assert.equal(rows.length, 2);
+          assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
+          done();
+        });
+      });
     },
     'after complete callback': function(done) {
       conn.exec('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
