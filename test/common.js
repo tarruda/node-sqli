@@ -50,7 +50,7 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.exec('INVALID SQL 2').then(function(err) { consume(err, 2); });
       conn.exec('INVALID SQL 3').then(function(err) { consume(err, 1); });
     },
-    'rollback resumes paused connection': 
+    'rollback on paused connection removes pending statements and resumes it': 
     function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
@@ -58,13 +58,21 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
       conn.exec('CAUSING SQL ERROR').then(function(err) {
+        // FIXME having to test private stuff = bad design
+        assert.strictEqual(conn._queue.length, 2);
         conn.rollback();
+        assert.strictEqual(conn._queue.length, 0);
+        // only true is the connection was paused
         conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
           assert.equal(rows.length, 2);
           assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
           done();
         });
       });
+      // These two should not be sent to the database after 'rollback' is
+      // invoked on the connection
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [5, 'ghi']);
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [6, 'jkl']);
     },
     'after complete callback': function(done) {
       conn.exec('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
