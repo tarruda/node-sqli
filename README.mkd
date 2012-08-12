@@ -102,6 +102,39 @@ conn.error(function(err) {
 });
 ```
 
+  After an error ocurrs, the connection will pause, and can be resumed like this:
+
+```js
+conn.exec('INSERT INTO t1 VALUES (1, 2)')
+conn.exec('INSERT INTO t2 VALUES (3, 4)')
+.then(function() {
+  console.log('success');
+})
+conn.error(function(err) {
+  if (err.code = 100) {
+    // ignore the error and continue from the second statement
+    conn.resume();
+  } else {
+    // unexpected error, clear the statement queue
+    conn.resume(true);
+    conn.error('error');
+  }
+})
+```
+
+  If inside a transaction, it is possible to rollback which will also clear
+  any pending statements:
+
+```js
+conn.begin();
+conn.exec('INSERT INTO t1 VALUES (1, 2)')
+conn.exec('INSERT INTO t2 VALUES (3, 4)')
+conn.error(function(err) {
+  conn.rollback();
+})
+conn.commit();
+```
+
 #### Implementing custom drivers:
 
   Here is node-sqlite3 wrapper:
