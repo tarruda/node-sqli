@@ -111,13 +111,15 @@ conn.exec('INSERT INTO t2 VALUES (3, 4)')
   console.log('success');
 })
 conn.error(function(err) {
+  // lets say an error ocurred in the first statement
   if (err.code = 100) {
     // ignore the error and continue from the second statement
     conn.resume();
   } else {
     // unexpected error, clear the statement queue
     conn.resume(true);
-    conn.error('error');
+    // the 'true' argument will clear queued statements
+    // so you can restart work or do something else
   }
 })
 ```
