@@ -1,5 +1,5 @@
-var postgres = require('../lib/sqli').getDriver('postgres')
-, replaceQMarks = require('../lib/postgres').replaceQMarks
+var postgres = require('../src/sqli').getDriver('postgres')
+, replaceQMarks = require('../src/postgres').replaceQMarks
 , createSuite = require('./common').createSuite
 , assert = require('assert');
 
@@ -23,10 +23,7 @@ suite('Postgres -', function() {
 
 if (postgres) {
   var connStr = 'tcp://postgres:123@localhost/postgres';
-  // only test if it is possible to connect
-  var tmp = postgres.connect(connStr).ready(function() {
-    createSuite(postgres.createPool(connStr, 1), {
-      blobType: 'bytea'
-    });
+  createSuite(postgres.createPool(connStr, 1), {
+    blobType: 'bytea'
   });
 }

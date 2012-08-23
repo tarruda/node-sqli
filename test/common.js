@@ -8,7 +8,8 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
   var options = {
     blobType: 'BLOB',
     stringType: 'TEXT'
-  }, conn = null;
+  };
+  var conn = null;
   var tests = {
     'statement error': function(done) {
       conn.exec('INVALID SQL').then(function(err) {

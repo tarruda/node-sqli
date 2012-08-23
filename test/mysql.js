@@ -1,4 +1,4 @@
-var mysql = require('../lib/sqli').getDriver('mysql')
+var mysql = require('../src/sqli').getDriver('mysql')
 , createSuite = require('./common').createSuite;
 
 
@@ -7,8 +7,5 @@ if (mysql) {
     socketPath: '/var/run/mysqld/mysqld.sock',
     database: 'test'
   };
-  // only test if it is possible to connect
-  var tmp = mysql.connect(connStr).ready(function() {
-    createSuite(mysql.createPool(connStr, 1));
-  });
+  createSuite(mysql.createPool(connStr, 1));
 }
