@@ -351,7 +351,7 @@ class ResultPromise
       @_flush()
 
   _flush: ->
-    if typeof @_callback is 'function' then @_callback()
+    if typeof @_callback is 'function' and not @_error then @_callback()
     if typeof @_then is 'function' and @_finished then @_then()
   
   _consume: (cb) ->

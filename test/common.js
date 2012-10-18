@@ -51,6 +51,18 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.exec('INVALID SQL 2').then(function(err) { consume(err, 2); });
       conn.exec('INVALID SQL 3').then(function(err) { consume(err, 1); });
     },
+    'data-reading callbacks should not be executed on errors':
+    function(done) {
+      conn.exec('SELECT * FROM invalid')
+      .all(function(rows) {
+        throw new Error('This callback should not execute');
+      })
+      .then(function(err) {
+        if (!err)
+          throw new Error('Should have thrown');
+        done()
+      })
+    },
     'rollback on paused connection removes pending statements and resumes it': 
     function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
