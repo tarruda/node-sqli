@@ -1,0 +1,8 @@
+/node_modules
+/src
+/test
+*.log
+*.swp
+*~
+*.tgz
+Makefile

@@ -2,7 +2,7 @@
   "author": "Thiago de Arruda <tpadilha84@gmail.com>",
   "name": "sqli",
   "description": "Common interface for accessing SQL databases from node.js",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "./lib/sqli.js",
   "repository": {
     "type": "git",
