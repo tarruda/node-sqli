@@ -4,28 +4,30 @@
 
 var assert = require('assert');
 
-exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
+exports.createSuite = function(pool, specificOptions) {
   var options = {
     blobType: 'BLOB',
     stringType: 'TEXT'
   };
   var conn = null;
-  var tests = {
-    'statement error': function(done) {
+  var tests = [{
+    name: 'statement error',
+    f: function(done) {
       conn.exec('INVALID SQL').then(function(err) {
         assert.notStrictEqual(err, null);
         done();
       });
-    },
-    'error in statement propagates to connection': 
-    function(done) {
+    }}, {
+    name: 'error in statement propagates to connection',
+    f: function(done) {
       conn.exec('INVALID SQL');
       conn.error(function(err) { 
         assert.notStrictEqual(err, null);
         done();
       });
-    },
-    "can't use paused connection": function(done) {
+    }}, {
+    name: "can't use paused connection",
+    f: function(done) {
       conn.exec('INVALID SQL')
       .then(function(err) { 
         try {
@@ -36,9 +38,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         }
         throw new Error('Should have thrown error due to paused connection');
       });
-    },
-    'connection pause on error then resume': 
-    function(done) {
+    }}, {
+    name: 'connection pause on error then resume',
+    f: function(done) {
       var expected = 3;
       function consume(err, expectedOrder) {
         assert.strictEqual(expectedOrder, expected);
@@ -50,9 +52,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       conn.exec('INVALID SQL').then(function(err) { consume(err, 3); });
       conn.exec('INVALID SQL 2').then(function(err) { consume(err, 2); });
       conn.exec('INVALID SQL 3').then(function(err) { consume(err, 1); });
-    },
-    'data-reading callbacks should not be executed on errors':
-    function(done) {
+    }}, {
+    name: 'data-reading callbacks should not be executed on errors',
+    f: function(done) {
       conn.exec('SELECT * FROM invalid')
       .all(function(rows) {
         throw new Error('This callback should not execute');
@@ -62,9 +64,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
           throw new Error('Should have thrown');
         done()
       })
-    },
-    'rollback on paused connection removes pending statements and resumes it': 
-    function(done) {
+    }}, {
+    name: 'rollback on paused connection removes pending statements and resumes it',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.begin();
@@ -75,7 +77,7 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.strictEqual(conn._queue.length, 2);
         conn.rollback();
         assert.strictEqual(conn._queue.length, 0);
-        // only true is the connection was paused
+        // only true if the connection was paused
         conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
           assert.equal(rows.length, 2);
           assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
@@ -86,8 +88,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
       // invoked on the connection
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [5, 'ghi']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [6, 'jkl']);
-    },
-    'after complete callback': function(done) {
+    }}, {
+    name: 'after complete callback',
+    f: function(done) {
       conn.exec('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
         [1, 'String1']);
       conn.exec("INSERT INTO test (id, stringcol) VALUES(2, 'String2')")
@@ -95,8 +98,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.strictEqual(err, null);
         done();
       });
-    },
-    'inserting strings': function(done) {
+    }}, {
+    name: 'inserting strings',
+    f: function(done) {
       conn.exec('INSERT INTO test (id, stringcol) VALUES(?, ?)', 
           [1, 'String1']);
       conn.exec("INSERT INTO test (id, stringcol) VALUES(2, 'String2')");
@@ -108,8 +112,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(rows[1].stringcol, 'String2');
         done();
       });
-    },
-    'update': function(done) {
+    }}, {
+    name: 'update',
+    f: function(done) {
       // FIXME: This will break on postgres 9.x if the 'postgresql.conf'
       // option 'bytea_output' is not 'escape'. Perhaps find a way to force
       // this setting on client connection?
@@ -124,8 +129,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(rows[1].blobcol.toString('utf-8'), 'txt');
         done();
       });
-    },
-    'update where': function(done) {
+    }}, {
+    name: 'update where',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.exec("UPDATE test SET stringcol = 'txt' WHERE id=2");
@@ -134,8 +140,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(rows[1].stringcol, 'txt');
         done();
       });
-    },
-    'delete': function(done) {
+    }}, {
+    name: 'delete',
+    f: function(done) {
       conn.exec('INSERT INTO test (id) VALUES(?)', [1]);
       conn.exec('INSERT INTO test (id) VALUES(?)', [2]);
       conn.exec('SELECT COUNT(*) FROM test').scalar(function(value) {
@@ -146,8 +153,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(value, 0);
         done();
       });
-    },
-    'delete where': function(done) {
+    }}, {
+    name: 'delete where',
+    f: function(done) {
       conn.exec('INSERT INTO test (id) VALUES(?)', [1]);
       conn.exec('INSERT INTO test (id) VALUES(?)', [2]);
       conn.exec('SELECT COUNT(*) FROM test').scalar(function(value) {
@@ -158,8 +166,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(value, 1);
         done();
       });
-    },
-    'transaction begin': function(done) {
+    }}, {
+    name: 'transaction begin',
+    f: function(done) {
       conn.begin();
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [4, 'jkl']);
@@ -169,8 +178,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         done();
       });
       conn.commit();
-    },
-    'transaction commit': function(done) {
+    }}, {
+    name: 'transaction commit',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.begin();
@@ -183,8 +193,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         ['abc', 'def', 'ghi', 'jkl']);
         done();
       });
-    },
-    'transaction rollback': function(done) {
+    }}, {
+    name: 'transaction rollback',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.begin();
@@ -196,13 +207,14 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
         done();
       });
-    },
-    'transaction savepoints': function(done) {
+    }}, { 
+    name: 'transaction savepoints',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.begin();
       conn.exec("UPDATE test SET stringcol = 'txt' WHERE id=2");
-      conn.save('s1');
+      conn.save('s1')
       conn.exec('DELETE FROM test WHERE id = 1');
       conn.exec('SELECT stringcol AS s FROM test').all(function(rows) {
         assert.equal(rows.length, 1);
@@ -219,8 +231,27 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.deepEqual([rows[0].s, rows[1].s], ['abc', 'def']);
         done();
       });
-    },
-    'select each': function(done) {
+    }}, {
+    name: 'cause error after transaction savepoint',
+    f: function(done) {
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
+      conn.begin();
+      conn.exec("UPDATE test SET stringcol = 'txt' WHERE id=2");
+      conn.save('s1');
+      // Resinsert the same record to cause a constraint error
+      conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc'])
+      .then(function(err){
+        conn.rollback('s1')
+        conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi'])
+        conn.exec('SELECT * FROM test').all(function(rows) {
+          assert.equal(rows.length, 3)
+          done()
+        })
+      })
+    }}, {
+    name: 'select each',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
@@ -233,8 +264,9 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
             'only invoke the final callback after the rows callbacks');
         done();
       });
-    },
-    'select first': function(done) {
+    }}, {
+    name: 'select first',
+    f: function(done) {
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [1, 'abc']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [2, 'def']);
       conn.exec('INSERT INTO test (id,stringcol) VALUES(?,?)', [3, 'ghi']);
@@ -242,22 +274,19 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
         assert.equal(row.s, 'ghi');
         done();
       });
-    },
-  };
+    }},
+  ];
   if (specificOptions) {
     for (var key in specificOptions)
       options[key] = specificOptions[key];
   }
-  if (typeof specificTestsFactory === 'function') {
-    var specificTests = specificTestsFactory(conn);
-    if (specificTests)
-      for (var key in specificTests) 
-        tests[key] = specificTests[key];
-  }
   suite('Common -', function() {
     setup(function() {
       conn = pool.get();
-      conn.exec('DROP TABLE IF EXISTS test'); 
+      // conn.error(function(err) {
+      //   console.log(err)
+      // })
+      conn.exec('DROP TABLE IF EXISTS test');
       conn.exec(
         'CREATE TABLE test (' +
           ' id INTEGER PRIMARY KEY,' +
@@ -268,7 +297,8 @@ exports.createSuite = function(pool, specificOptions, specificTestsFactory) {
     teardown(function() {
       conn.close();
     });
-    for (var key in tests)
-      test(key, tests[key]);
+    for (var i = 0; i < tests.length; i += 1) {
+      test(tests[i].name, tests[i].f);
+    }
   });
 }
